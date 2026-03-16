@@ -35,13 +35,23 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     }
 });
 
-// Funcția care grupează efectiv tab-ul
+// logica corecta care grupeaza tab-urile doar intr-un singur grup nu mai multe
 function groupStaleTab(tabId) {
-    chrome.tabs.group({ tabIds: tabId }, (groupId) => {
-        chrome.tabGroups.update(groupId, {
-            title: "Stale Tabs",
-            color: "grey"
-        });
+    // verificam daca exista deja un grup cu numele "Stale Tabs"
+    chrome.tabGroups.query({ title: "Stale Tabs" }, (groups) => {
+        if (groups.length > 0) {
+            // daca exista, adaugam tab-ul in grupul respectiv
+            const existingGroupId = groups[0].id;
+            chrome.tabs.group({ groupId: existingGroupId, tabIds: tabId });
+        } else {
+            // daca nu exista deja, il cream
+            chrome.tabs.group({ tabIds: tabId }, (newGroupId) => {
+                chrome.tabGroups.update(newGroupId, {
+                    title: "Stale Tabs",
+                    color: "Purple"
+                });
+            });
+        }
     });
 }
 
