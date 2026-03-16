@@ -1,37 +1,48 @@
-const timerPentruTab = {};
-// tinem evidenta timerelor pentru fiecare tab
+// lucram cu alarms de la chrome deoarece varianta veche nu functiona
+// background.js fiind un service worker, aceste era dezactivat dupa cateva secunde si nu permitea sa verificam daca tab-urile sunt inactive sau nu
 
-// timpul dupa care consideram ca datele sunt invechite si trebuie reimprospatate
-// pentru test 1 minut
-const STALE_TIME = 60000; //1 minut in milisecunde, mai tarziu va fi schimbat la 24 de ore
-
+// ascultam cand utilizatorul schimba tab-ul
 chrome.tabs.onActivated.addListener((activeInfo) => {
-    const idCurent = activeInfo.tabId;
+    const currentTabId = activeInfo.tabId;
 
-    if (timerPentruTab[idCurent]) {
-        clearTimeout(timerPentruTab[idCurent]); // daca suntem pe tab, resetam timerul de stale
-        delete timerPentruTab[idCurent];
-    }
+    // la tabul pe care suntem acum stergem clar alarmele 
+    chrome.alarms.clear(`stale_tab_${currentTabId}`);
 
+    // cautam toate tab-urile deschise
     chrome.tabs.query({}, (tabs) => {
         tabs.forEach((tab) => {
-            if (tab.id !== idCurent && !timerPentruTab[tab.id]) {
-                // daca nu suntem pe tab si nu avem deja un timer, il setam
-                timerPentruTab[tab.id] = setTimeout(() => {
-                    groupStaleTab(tab.id);   
-                }, STALE_TIME);
+            // daca tab-ul gasit nu e cel curent, punem o alarma de un minut(testing)
+            if (tab.id !== currentTabId) {
+                chrome.alarms.create(`stale_tab_${tab.id}`, { delayInMinutes: 1 });
             }
         });
     });
 });
 
-// functia care grupeaza taburile inactive
-function groupStaleTab(tabId) {
-    chrome.tabs.group({ tabIds: tabId}, (groupId) => {
-        // setam un titlu si o culoare pentru grupul de taburi
-        chrome.tabGroups.update(groupId, { title: "Taburi Inactive", color: "orange"});
-    })
+// ascultam cand o alarma suna
+chrome.alarms.onAlarm.addListener((alarm) => {
+    // daca alarma e pentru un tab inactiv, il grupam
+    if (alarm.name.startsWith("stale_tab_")) {
+        // din numele alarmei incercam extragerea id-ului specific tab-ului
+        const tabId = parseInt(alarm.name.replace("stale_tab_", ""));
+        
+        // verificam daca tab-ul mai este deschis in chrome, daca da il grupam
+        chrome.tabs.get(tabId, (tab) => {
+            if (!chrome.runtime.lastError && tab) {
+                groupStaleTab(tabId);
+            }
+        });
+    }
+});
 
+// Funcția care grupează efectiv tab-ul
+function groupStaleTab(tabId) {
+    chrome.tabs.group({ tabIds: tabId }, (groupId) => {
+        chrome.tabGroups.update(groupId, {
+            title: "Stale Tabs",
+            color: "grey"
+        });
+    });
 }
 
 
