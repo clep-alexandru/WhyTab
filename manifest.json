@@ -3,8 +3,15 @@
     "description": "...",
     "version": "1.0",
     "manifest_version": 3,
+    "pemissions": [
+        "tabs",
+        "tabGroups"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
     "action": {
-        "default_popup": "popup.html",
+        "default_popup": "/popup/popup.html",
         "default_icon": "/media/whytab.png"
     }
 }
