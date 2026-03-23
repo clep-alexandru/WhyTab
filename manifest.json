@@ -6,8 +6,10 @@
     "permissions": [
         "tabs",
         "tabGroups",
-        "alarms"
+        "alarms",
+        "storage"
     ],
+    "options_page": "/options/options.html",
     "background": {
         "service_worker": "background.js"
     },

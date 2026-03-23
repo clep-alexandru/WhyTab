@@ -10,11 +10,16 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 
     // cautam toate tab-urile deschise
     chrome.tabs.query({}, (tabs) => {
-        tabs.forEach((tab) => {
-            // daca tab-ul gasit nu e cel curent, punem o alarma de un minut(testing)
-            if (tab.id !== currentTabId) {
-                chrome.alarms.create(`stale_tab_${tab.id}`, { delayInMinutes: 1 });
-            }
+        // citim delay-ul din storage
+        chrome.storage.local.get("inactivityDelayMinutes", (result) => {
+            const delayInMinutes = result.inactivityDelayMinutes || 1; // implicit 1 minut
+            
+            tabs.forEach((tab) => {
+                // daca tab-ul gasit nu e cel curent, punem o alarma cu delay-ul configurat
+                if (tab.id !== currentTabId) {
+                    chrome.alarms.create(`stale_tab_${tab.id}`, { delayInMinutes: delayInMinutes });
+                }
+            });
         });
     });
 });
