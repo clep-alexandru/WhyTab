@@ -37,21 +37,38 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 // logica corecta care grupeaza tab-urile doar intr-un singur grup nu mai multe
 function groupStaleTab(tabId) {
-    // verificam daca exista deja un grup cu numele "Stale Tabs"
-    chrome.tabGroups.query({ title: "Stale Tabs" }, (groups) => {
-        if (groups.length > 0) {
-            // daca exista, adaugam tab-ul in grupul respectiv
-            const existingGroupId = groups[0].id;
-            chrome.tabs.group({ groupId: existingGroupId, tabIds: tabId });
-        } else {
-            // daca nu exista deja, il cream
-            chrome.tabs.group({ tabIds: tabId }, (newGroupId) => {
-                chrome.tabGroups.update(newGroupId, {
-                    title: "Stale Tabs",
-                    color: "Purple"
-                });
+    // incercam sa adaugam tab-ul la grupul stocat
+    chrome.storage.local.get("staleTabsGroupId", (result) => {
+        const storedGroupId = result.staleTabsGroupId;
+        
+        if (storedGroupId) {
+            // verificam daca grupul inca exista
+            chrome.tabGroups.get(storedGroupId, (group) => {
+                if (!chrome.runtime.lastError && group) {
+                    // grupul exista, adaugam tab-ul in el
+                    chrome.tabs.group({ groupId: storedGroupId, tabIds: tabId });
+                } else {
+                    // grupul a fost sters, cream altul
+                    createNewStaleTabsGroup(tabId);
+                }
             });
+        } else {
+            // nu exista grup salvat, cream unu nou
+            createNewStaleTabsGroup(tabId);
         }
+    });
+}
+
+// functie ajutatoare pentru crearea unui grup nou
+function createNewStaleTabsGroup(tabId) {
+    chrome.tabs.group({ tabIds: tabId }, (newGroupId) => {
+        chrome.tabGroups.update(newGroupId, {
+            title: "Stale Tabs",
+            color: "cyan"
+        }, () => {
+            // salvam ID-ul grupului pentru utilizare ulterioara
+            chrome.storage.local.set({ staleTabsGroupId: newGroupId });
+        });
     });
 }
 
